@@ -1,0 +1,207 @@
+---
+title: "Class_Survey_Analysis"
+author: "pk673@rutgets.edu"
+date: "2023-04-07"
+output: html_document
+---
+```{r}
+#Importing required libraries\
+library(magrittr)
+library(factoextra)
+library(NbClust)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(grid)
+library(factoextra)
+library(corrplot)
+library(ggcorrplot)
+library(psych)
+library(MASS)
+library(memisc)
+
+library(ggplot2)
+library(cowplot)
+library(caret)
+library(e1071)
+library(pROC)
+
+library(dplyr)
+
+
+#Loading the dataset
+class_data <- read.csv("~/Downloads/ClassSurvey.csv")
+head(class_data)
+
+str(class_data)
+
+#Removing categorical columns and numerical can only be used for analysis
+class_data_analysis <- class_data[,3:13]
+head(class_data_analysis)
+summary(class_data_analysis)
+#This output shows that the mean and median usage time for social media apps such as Whatsapp, Instagram, and Snapchat is relatively high compared to other apps. This indicates that students may be spending significant time on these apps. Additionally, the maximum usage time for these apps is relatively high, which could suggest potential addiction or overuse.
+#On the other hand, apps such as Twitter and LinkedIn have lower mean and median usage times, indicating that students may be spending less time on these platforms. However, it's essential to note that some students may be using these apps for professional or academic purposes, which could explain the lower usage times.
+#Overall, the usage data provides insights into which apps students may be spending the most time on, which could indicate potential addiction or overuse.
+
+
+dim(class_data_analysis)
+#The dataset contains 175 observations and 11 variables
+
+#Data Preparation
+norm_data <- scale(class_data_analysis)
+head(norm_data)
+
+corr <- cor(norm_data, method = "pearson")
+corr
+ggcorrplot(corr)
+
+#WeChat and Tiktok usage time(in hrs) are highly correlated. TikTok primarily focuses on short-form video content, while WeChat focuses more on messaging and communication. Students spending similar amounts of time on TikTok and WeChat could be because they enjoy the content on both platforms or find them equally helpful in staying connected with friends and family. Additionally, cultural factors may influence their preferences for certain social media platforms. Both apps are particularly popular in China and not specifically in India.
+
+
+
+#EFA
+fa.parallel(class_data_analysis)
+fit.pc <- principal(class_data_analysis, nfactors=5, rotate="varimax")
+fit.pc
+fa.plot(fit.pc)
+fa.diagram(fit.pc)
+fit.pc$loadings
+fit.pc$scores
+
+####Conclusions######
+# Here are some insights we can gain from the Factor Analysis output:
+# •	RC1: This component is negatively correlated with Whatsapp, Telegram, and Facebook and positively correlated with TikTok and WeChat. This suggests that people who use TikTok and WeChat are less likely to use the other three social media platforms. Also, WeChat and TikTok share similar characteristics as both are used for communication and socializing purposes.
+# 
+# •	RC2: This component is positively correlated with Instagram,Snapchat and Linkedin and negatively correlated with Telegram. This suggests that people who use Instagram,Snapchat and Linkedin are less likely to use Telegram. This can symbolize social networking factor, where these platforms are used primarily for building and maintaining social connections, sharing personal updates and experiences, and staying informed about others' lives.
+# 
+# •	RC3: This component is highly correlated with Twitter and  Facebook negatively correlated with most other variables except Instagram. This could represent the public and real-time nature of information sharing on these platforms, where users can share their thoughts and opinions with a wider audience.
+# 
+# •	RC4: This component is highly correlated with BeReal and negatively correlated with Whatsapp and mostl other variables. This suggests that BeReal is a unique social media platform that is not strongly associated with any other platform.
+# 
+# •	RC5: This component is highly correlated with Messages and negatively correlated with all other variables. This suggests that Messages is a unique communication platform that is not strongly associated with any social media platform.
+# 
+# Overall, the output shows that some social media platforms are highly correlated, while some like BeReal and Messages are unique and not strongly associated with any other platform. 
+
+
+#PCA
+
+norm_data
+norm_data=na.omit(norm_data)
+pca_data <- prcomp(norm_data)
+summary(pca_data)
+
+fviz_eig(pca_data, choice = "variance", addlabels = TRUE, barfill = "steelblue", linecolor = "red")
+
+pca_data$rotation[,1:6]
+
+eigenvalues <- summary(pca_data)$importance[2,]
+eigenvalues
+
+#Correlation Circle
+fviz_pca_var(pca_data, col.var = "black")
+
+#Quality of representation
+fviz_cos2(pca_data, choice = "var", axes = 1:6)
+fviz_pca_var(pca_data, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+)
+#Contributions of variables to PCs
+pca1<- fviz_contrib(pca_data, choice = "var", axes = 1, top = 6, title = "PCA1")
+pca2<- fviz_contrib(pca_data, choice = "var", axes = 2, top = 6, title = "PCA2")
+pca3<- fviz_contrib(pca_data, choice = "var", axes = 3, top = 6, title = "PCA3")
+pca4<- fviz_contrib(pca_data, choice = "var", axes = 4, top = 6, title = "PCA4")
+pca5<- fviz_contrib(pca_data, choice = "var", axes = 5, top = 6, title = "PCA5")
+pca6<- fviz_contrib(pca_data, choice = "var", axes = 6, top = 6, title = "PCA6")
+
+grid.arrange(pca1, pca2,pca3,pca4,pca5,pca6,  ncol=6)
+
+#Individual representation
+ind <- get_pca_ind(pca_data)
+ind
+fviz_pca_ind(pca_data, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+)
+
+# Based on the PCA analysis performed on the dataset, several conclusions can be made:
+# 
+# The first six principal components explain over 80% of the total variance in the data, with PC1 contributing the most at 31%.
+# 
+# PC1: The variables that have the highest positive correlation with PC1 are WeChat, Whatsapp, and TikTok, indicating that these platforms have a significant impact on the overall social media usage patterns.
+# PC2: The variables that contribute most to this component are Snapchat, Linkedin, and Facebook. This component can be interpreted as a measure of the usage of visually-oriented social media platforms.
+# PC3: The variables contributing most to this component are Instagram, Twitter, Telegram, and Facebook. This component can be interpreted as a measure of the usage of social media applications to get to know others' social lives.
+# PC4: The variables that contribute most to this component are BeReal, Whatsapp, and Twitter. This component can be interpreted as a measure of the usage of social media platforms for interaction with others.
+# PC5: The variable that contributes most to this component is Messages. This component can be interpreted as a measure of the usage of texting others not using the internet.
+# PC6: The variables that contribute most to this component are Facebook, Linkedin, and Telegram. This component is much very similar to PC3.
+
+
+#Kmeans Clustering
+
+class_survey_dist <- dist(norm_data, method = "euclidean")
+fviz_dist(class_survey_dist, show_labels = F)
+nb <- NbClust(norm_data, distance = "euclidean", min.nc = 2,
+              max.nc = 10, method = "kmeans")
+#Did not go for 5 clusters as there was a lot of overlap seen
+km_data <- kmeans(norm_data, centers = 3, nstart = 35)
+fviz_cluster(list(data=norm_data, clusters=km_data$cluster))
+
+#The clustering algorithm has identified three groups of students with different levels of social media addiction. One group consists of students with low addiction scores, another group with moderate addiction scores, and a third group may consist of students with high addiction scores.
+
+#The absence of overlap in these clusters means that the clustering algorithm was able to identify distinct and non-overlapping groups of students based on their social media addiction scores. This means that the students in each group had similar addiction scores and were significantly different from the students in the other groups.
+
+
+# #Logistic Regression
+
+class_data_df <- data.frame(class_data[,3:16])
+class_data_df<-class_data_df %>% select(-c(TotalSocialMediaScreenTime, Number.of.times.opened..hourly.intervals.))
+#class_data_df <- data.frame(class_data[,3:16])
+set.seed(123)
+train_indices <- sample(1:nrow(class_data_df), nrow(class_data_df)*0.8)
+train_data <- class_data_df[train_indices, ]
+test_data <- class_data_df[-train_indices, ]
+
+train_data$SocialMediaAddiction <- ifelse(train_data$SocialMediaAddiction == "Addicted", 0, 1)
+test_data$SocialMediaAddiction <- ifelse(test_data$SocialMediaAddiction == "Addicted", 0, 1)
+
+
+# Fit logistic regression model
+model <- glm(SocialMediaAddiction ~ ., data = train_data, family = "binomial")
+
+# Print model summary
+summary(model)
+
+
+#making predictions on the test data
+test_data$predicted.SocialMediaAddiction <- round(predict(model, newdata = test_data, type = "response"))
+
+library(caret)
+confusionMatrix(table(test_data$SocialMediaAddiction, test_data$predicted.SocialMediaAddiction))
+# # Precision
+# Define the confusion matrix as a table
+confMat <- table(test_data$SocialMediaAddiction, test_data$predicted.SocialMediaAddiction)
+
+# Calculate precision
+precision <- confMat[2, 2] / sum(confMat[, 2])
+precision
+# Calculate recall
+recall <- confMat[2, 2] / sum(confMat[2, ])
+recall
+# Calculate F1 score
+f1_score <- 2 * precision * recall / (precision + recall)
+f1_score
+
+#From the confusion matrix, we can see that the logistic regression model correctly predicted 25 out of 34 instances, giving an accuracy of 0.735. The sensitivity (true positive rate) is 0.652, meaning that the model correctly identified 65.2% of the individuals with social media addiction. The specificity (true negative rate) is 0.909, meaning that the model correctly identified 90.9% of the individuals without social media addiction. The precision of the model is 0.909, meaning that when the model predicts an individual to have social media addiction, it is correct 90.9% of the time. The recall of the model is 0.556, meaning that the model identified 55.6% of the individuals with social media addiction. The F1 score of the model is 0.690, indicating that the model has a good balance between precision and recall.
+
+# # Accuracy
+accuracy <- sum(diag(confMat))/sum(confMat)
+accuracy
+
+#ROC curve
+rocObj <- roc(test_data$SocialMediaAddiction, test_data$predicted.SocialMediaAddiction)
+plot(rocObj, main = "ROC Curve", print.auc = TRUE)
+
+#The AUC value of 88.9% shows that the model can distinguish between individuals with and without social media addiction. This is confirmed by the ROC curve, which shows a steep curve indicating a good trade-off between true positive and false positive rates.
+#Overall, the logistic regression model seems to perform reasonably well in predicting social media addiction based on the given predictors.
+
+```
